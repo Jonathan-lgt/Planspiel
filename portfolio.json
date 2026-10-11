@@ -1,0 +1,9 @@
+{
+  "cash": 20000.00,
+  "start_value": 50000.00,
+  "positions": [
+    { "symbol": "SAP.DE",  "name": "SAP",       "shares": 50,  "currency": "EUR" },
+    { "symbol": "SIE.DE",  "name": "Siemens",   "shares": 40,  "currency": "EUR" },
+    { "symbol": "AAPL",    "name": "Apple",     "shares": 30,  "currency": "USD" }
+  ]
+}
