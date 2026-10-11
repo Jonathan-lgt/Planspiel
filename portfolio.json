@@ -1,9 +1,13 @@
 {
-  "cash": 20000.00,
-  "start_value": 50000.00,
-  "positions": [
-    { "symbol": "SAP.DE",  "name": "SAP",       "shares": 50,  "currency": "EUR" },
-    { "symbol": "SIE.DE",  "name": "Siemens",   "shares": 40,  "currency": "EUR" },
-    { "symbol": "AAPL",    "name": "Apple",     "shares": 30,  "currency": "USD" }
-  ]
+  "cash": 2500.00,
+  "stocks": {
+    "SAP.DE": {
+      "shares": 10,
+      "last_price": 0.0
+    },
+    "BMW.DE": {
+      "shares": 15,
+      "last_price": 0.0
+    }
+  }
 }
