@@ -1,79 +1,77 @@
-#!/usr/bin/env python3
-"""Berechnet den aktuellen Depotwert und haengt ihn an data/history.json an."""
 import json
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
-
+from datetime import datetime
+import os
 import yfinance as yf
 
-ROOT = Path(__file__).parent
-PORTFOLIO = ROOT / "portfolio.json"
-HISTORY = ROOT / "data" / "history.json"
+# Absolute Pfade relativ zum Speicherort des Skripts
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PORTFOLIO_PATH = os.path.join(BASE_DIR, 'portfolio.json')
+HISTORY_PATH = os.path.join(BASE_DIR, 'data', 'history.json')
 
+def load_json(path):
+    if not os.path.exists(path):
+        return {}
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
-def last_price(symbol: str) -> float | None:
-    """Letzter verfuegbarer Kurs (fast_info, sonst 1-Minuten-Historie)."""
-    try:
-        price = yf.Ticker(symbol).fast_info["last_price"]
-        if price and price > 0:
-            return float(price)
-    except Exception:
-        pass
-    try:
-        hist = yf.Ticker(symbol).history(period="1d", interval="1m")
-        if not hist.empty:
-            return float(hist["Close"].iloc[-1])
-    except Exception:
-        pass
-    return None
+def save_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
 
+def update_tracker():
+    portfolio = load_json(PORTFOLIO_PATH)
+    history = load_json(HISTORY_PATH)
+    
+    if not isinstance(history, list):
+        history = []
 
-def main() -> int:
-    pf = json.loads(PORTFOLIO.read_text(encoding="utf-8"))
+    total_stocks_value = 0.0
+    cash = portfolio.get('cash', 0.0)
+    stocks = portfolio.get('stocks', {})
 
-    eurusd = last_price("EURUSD=X")  # USD pro 1 EUR
-    total = float(pf.get("cash", 0))
-    invested = 0.0
-    details = {}
+    for ticker, details in stocks.items():
+        shares = details.get('shares', 0)
+        current_price = details.get('last_price', 0.0)
+        
+        try:
+            # Letzte 5 Tage abrufen, falls heute Feiertag/Wochenende ist
+            stock = yf.Ticker(ticker)
+            todays_data = stock.history(period='5d')
+            if not todays_data.empty:
+                current_price = float(todays_data['Close'].iloc[-1])
+        except Exception as e:
+            print(f"Fehler beim Laden von {ticker}: {e}")
+        
+        details['last_price'] = round(current_price, 2)
+        total_stocks_value += shares * current_price
 
-    for pos in pf["positions"]:
-        price = last_price(pos["symbol"])
-        if price is None:
-            print(f"Kein Kurs fuer {pos['symbol']} - Lauf abgebrochen.", file=sys.stderr)
-            return 1
-        if pos.get("currency", "EUR") == "USD":
-            if not eurusd:
-                print("Kein EUR/USD-Kurs - Lauf abgebrochen.", file=sys.stderr)
-                return 1
-            price_eur = price / eurusd
-        else:
-            price_eur = price
-        value = price_eur * pos["shares"]
-        invested += value
-        details[pos["symbol"]] = round(value, 2)
-
-    total += invested
-    point = {
-        "t": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "v": round(total, 2),
-        "inv": round(invested, 2),
-        "pos": details,
+    total_portfolio_value = cash + total_stocks_value
+    
+    # Heutiges Datum im UTC-Format (YYYY-MM-DD)
+    today_str = datetime.utcnow().strftime('%Y-%m-%d')
+    
+    # Prüfen, ob für heute bereits ein Eintrag existiert (verhindert Duplikate)
+    existing_entry = next((item for item in history if item.get('date') == today_str), None)
+    
+    new_entry = {
+        "date": today_str,
+        "total": round(total_portfolio_value, 2),
+        "cash": round(cash, 2),
+        "stocks_value": round(total_stocks_value, 2)
     }
+    
+    if existing_entry:
+        existing_entry.update(new_entry)
+    else:
+        history.append(new_entry)
+        
+    # Historie chronologisch nach Datum sortieren
+    history = sorted(history, key=lambda x: x['date'])
 
-    HISTORY.parent.mkdir(exist_ok=True)
-    history = json.loads(HISTORY.read_text()) if HISTORY.exists() else []
+    save_json(PORTFOLIO_PATH, portfolio)
+    save_json(HISTORY_PATH, history)
+    print(f"Erfolgreich aktualisiert ({today_str}): Gesamtwert = {total_portfolio_value:.2f} EUR")
 
-    # Nur speichern, wenn sich der Wert geaendert hat (haelt die Datei klein)
-    if history and history[-1]["v"] == point["v"]:
-        print("Wert unveraendert - nichts zu speichern.")
-        return 0
-
-    history.append(point)
-    HISTORY.write_text(json.dumps(history, separators=(",", ":")), encoding="utf-8")
-    print(f"Gespeichert: {point['v']:.2f} EUR")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == '__main__':
+    update_tracker()
