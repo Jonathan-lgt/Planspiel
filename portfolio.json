@@ -1,0 +1,14 @@
+{
+  "name": "Schüler:innenwettbewerb",
+  "cash": 1318.09,
+  "start_value": 50000.00,
+  "psb_referenz": { "zeit": "2026-10-11 17:30", "gesamtdepotwert": 45254.29 },
+  "positions": [
+    { "symbol": "IFX.DE", "name": "Infineon",         "shares": 150, "currency": "EUR", "psb_kurs": 58.98 },
+    { "symbol": "MU",     "name": "Micron",           "shares": 10,  "currency": "USD", "psb_kurs": 918.70 },
+    { "symbol": "NVDA",   "name": "Nvidia",           "shares": 44,  "currency": "USD", "psb_kurs": 204.80 },
+    { "symbol": "SNDK",   "name": "Sandisk",          "shares": 2,   "currency": "USD", "psb_kurs": 1410.00 },
+    { "symbol": "STX",    "name": "Seagate",          "shares": 10,  "currency": "USD", "psb_kurs": 698.00 },
+    { "symbol": "WDC",    "name": "Western Digital",  "shares": 20,  "currency": "USD", "psb_kurs": 354.55 }
+  ]
+}
